@@ -12,7 +12,6 @@ from utils.beam_search import CachedLookup
 from utils.functions import sample_many
 
 
-
 def set_decode_type(model, decode_type):
     if isinstance(model, DataParallel):
         model = model.module
@@ -91,11 +90,11 @@ class AttentionModel(nn.Module):
 
             # Special embedding projection for depot node
             self.init_embed_depot = nn.Linear(2, embedding_dim)
-            
+
             if self.is_vrp and self.allow_partial:  # Need to include the demand if split delivery allowed
                 self.project_node_step = nn.Linear(1, 3 * embedding_dim, bias=False)
         elif self.is_pdp:
-            step_context_dim = embedding_dim 
+            step_context_dim = embedding_dim
             node_dim = 2
             self.init_embed_depot = nn.Linear(2, embedding_dim)
             self.W_placeholder = nn.Parameter(torch.Tensor(2 * embedding_dim))
@@ -106,7 +105,7 @@ class AttentionModel(nn.Module):
             assert problem.NAME == "tsp", "Unsupported problem: {}".format(problem.NAME)
             step_context_dim = 2 * embedding_dim  # Embedding of first and last node
             node_dim = 2  # x, y
-            
+
             # Learned input symbols for first action
             self.W_placeholder = nn.Parameter(torch.Tensor(2 * embedding_dim))
             self.W_placeholder.data.uniform_(-1, 1)  # Placeholder should be in range of activations
@@ -221,8 +220,7 @@ class AttentionModel(nn.Module):
             feature_delivery = input['loc'][:, n_loc // 2:, :]  # [batch_size, graph_size//2, 2]
             embed_pick = self.init_embed_pick(feature_pick)
             embed_delivery = self.init_embed_delivery(feature_delivery)
-            return torch.cat([embed_depot, embed_pick, embed_delivery], 1)  
-
+            return torch.cat([embed_depot, embed_pick, embed_delivery], 1)
 
         if self.is_vrp or self.is_orienteering or self.is_pctsp:
             if self.is_vrp:
@@ -242,10 +240,6 @@ class AttentionModel(nn.Module):
                 ),
                 1
             )
-
-
-
-
 
     def _inner(self, input, embeddings):
 
@@ -430,7 +424,7 @@ class AttentionModel(nn.Module):
                     ),
                     -1
                 )
-                
+
         if self.is_pdp:
             # Embedding of previous node + remaining capacity
             if from_depot:
@@ -439,14 +433,14 @@ class AttentionModel(nn.Module):
                 return embeddings[:, 0:1, :].expand(batch_size, num_steps, embeddings.size(-1))
             else:
                 return torch.gather(
-                              embeddings,
-                              1,
-                              current_node.contiguous()
-                                  .view(batch_size, num_steps, 1)
-                                  .expand(batch_size, num_steps, embeddings.size(-1))
-                          ).view(batch_size, num_steps, embeddings.size(-1))
-                        
-                        
+                    embeddings,
+                    1,
+                    current_node.contiguous()
+                        .view(batch_size, num_steps, 1)
+                        .expand(batch_size, num_steps, embeddings.size(-1))
+                ).view(batch_size, num_steps, embeddings.size(-1))
+
+
         elif self.is_orienteering or self.is_pctsp:
             return torch.cat(
                 (
@@ -466,7 +460,7 @@ class AttentionModel(nn.Module):
                 -1
             )
         else:  # TSP
-        
+
             if num_steps == 1:  # We need to special case if we have only 1 step, may be the first or not
                 if state.i.item() == 0:
                     # First and only step, ignore prev_a (this is a placeholder)
@@ -474,7 +468,8 @@ class AttentionModel(nn.Module):
                 else:
                     return embeddings.gather(
                         1,
-                        torch.cat((state.first_a, current_node), 1)[:, :, None].expand(batch_size, 2, embeddings.size(-1))
+                        torch.cat((state.first_a, current_node), 1)[:, :, None].expand(batch_size, 2,
+                                                                                       embeddings.size(-1))
                     ).view(batch_size, 1, -1)
             # More than one step, assume always starting with first
             embeddings_per_step = embeddings.gather(
@@ -530,7 +525,6 @@ class AttentionModel(nn.Module):
     def _get_attention_node_data(self, fixed, state):
 
         if self.is_vrp and self.allow_partial:
-
             # Need to provide information of how much each node has already been served
             # Clone demands as they are needed by the backprop whereas they are updated later
             glimpse_key_step, glimpse_val_step, logit_key_step = \
@@ -551,6 +545,6 @@ class AttentionModel(nn.Module):
 
         return (
             v.contiguous().view(v.size(0), v.size(1), v.size(2), self.n_heads, -1)
-            .expand(v.size(0), v.size(1) if num_steps is None else num_steps, v.size(2), self.n_heads, -1)
-            .permute(3, 0, 1, 2, 4)  # (n_heads, batch_size, num_steps, graph_size, head_dim)
+                .expand(v.size(0), v.size(1) if num_steps is None else num_steps, v.size(2), self.n_heads, -1)
+                .permute(3, 0, 1, 2, 4)  # (n_heads, batch_size, num_steps, graph_size, head_dim)
         )

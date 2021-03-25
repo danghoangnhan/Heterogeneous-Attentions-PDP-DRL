@@ -9,7 +9,6 @@ import argparse
 
 
 def generate_pdp_data(dataset_size, pdp_size, is_guassian, sigma):
-
     if is_guassian:
         def truncated_normal(graph_size, sigma):
             mu = 0.5
@@ -24,14 +23,14 @@ def generate_pdp_data(dataset_size, pdp_size, is_guassian, sigma):
                 data.append(truncated_normal(graph_size, sigma))
 
             return data
+
         return list(zip(truncated_normal(dataset_size, sigma),  # Depot location
                         generate(dataset_size, graph_size)
-                ))
+                        ))
     else:
         return list(zip(np.random.uniform(size=(dataset_size, 2)).tolist(),  # Depot location
                         np.random.uniform(size=(dataset_size, pdp_size, 2)).tolist()
                         ))
-
 
 
 if __name__ == "__main__":
@@ -71,7 +70,7 @@ if __name__ == "__main__":
                 os.makedirs(datadir, exist_ok=True)
 
                 if opts.filename is None:
-                    if opts.is_guassian == False:
+                    if not opts.is_guassian:
                         filename = os.path.join(datadir, "{}{}{}_{}_seed{}.pkl".format(
                             problem,
                             "_{}".format(distribution) if distribution is not None else "",
@@ -94,6 +93,3 @@ if __name__ == "__main__":
                     assert False, "Unknown problem: {}".format(problem)
                 print(dataset[0])
                 save_dataset(dataset, filename)
-   
-
-
